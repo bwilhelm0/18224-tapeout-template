@@ -223,6 +223,7 @@ module ALU
   always_comb begin
     flag_in[0] = 1'b0;
     NA = 'd0;
+    d = 'd0;
     if (ALU_ctrl.ARITH) begin
       unique case (ALU_ctrl.arith_op)
         ADD1_op: begin

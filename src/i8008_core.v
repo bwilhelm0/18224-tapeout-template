@@ -203,6 +203,7 @@ module ALU (
 	always @(*) begin
 		flag_in[0] = 1'b0;
 		NA = 'd0;
+		d = 'd0;
 		if (ALU_ctrl[2])
 			case (ALU_ctrl[5-:3])
 				3'b100: begin
