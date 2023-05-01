@@ -16,8 +16,8 @@ module my_chip (
         .READY(io_in[9]),
 
         .D_out(io_out[7:0]),
-        .state(io_out[10:8])
-        .Sync(io_out[11]),
+        .state(io_out[10:8]),
+        .Sync(io_out[11])
     );
 
 endmodule
