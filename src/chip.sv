@@ -1,3 +1,5 @@
+`include "i8008.v"
+
 `default_nettype none
 
 module my_chip (
@@ -7,41 +9,17 @@ module my_chip (
     input logic reset // Important: Reset is ACTIVE-HIGH
 );
     
-    // Basic counter design as an example
+    i8008_core my_core (
+        .clk(clock),
+        .rst(reset),
 
+        .D_in(io_in[7:0]),
+        .INTR(io_in[8]),
+        .READY(io_in[9]),
 
-    wire [6:0] led_out;
-    assign io_out[6:0] = led_out;
-
-    // external clock is 1000Hz, so need 10 bit counter
-    reg [9:0] second_counter;
-    reg [3:0] digit;
-
-    always @(posedge clock) begin
-        // if reset, set counter to 0
-        if (reset) begin
-            second_counter <= 0;
-            digit <= 0;
-        end else begin
-            // if up to 16e6
-            if (second_counter == 1000) begin
-                // reset
-                second_counter <= 0;
-
-                // increment digit
-                digit <= digit + 1'b1;
-
-                // only count from 0 to 9
-                if (digit == 9)
-                    digit <= 0;
-
-            end else
-                // increment counter
-                second_counter <= second_counter + 1'b1;
-        end
-    end
-
-    // instantiate segment display
-    seg7 seg7(.counter(digit), .segments(led_out));
+        .D_out(io_out[7:0]),
+        .state(io_out[10:8])
+        .Sync(io_out[11]),
+    );
 
 endmodule
