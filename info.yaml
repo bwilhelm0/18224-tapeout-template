@@ -1,10 +1,10 @@
 --- 
 project:
   source_files:
+    - i8008_core.v
     - toplevel_chip.v
     - chip.sv
     - decoder.v
-    - i8008_core.v
   top_module:  "toplevel_chip"
 
 # As everyone will have access to all designs, try to make it easy for someone new to your design to know what

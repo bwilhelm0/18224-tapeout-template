@@ -1,5 +1,3 @@
-`include "i8008.v"
-
 `default_nettype none
 
 module my_chip (
