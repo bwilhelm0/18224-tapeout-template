@@ -43,11 +43,11 @@ documentation:
                 but it will involve running a script very similar to the i8008_tb.py file
                 since this handles memory management, and processor state casing already.
                 I plan to upload this to the github once I finish it."      # Instructions on how someone could test your project, include things like what buttons do what and how to set the clock if needed
-  external_hw:  "PLACEHOLDER"      # Describe any external hardware needed
+  external_hw:  "Raspberry Pi or microcontroller to simulate memory"      # Describe any external hardware needed
   language:     "verilog" # other examples include Verilog, Amaranth, VHDL, etc
-  doc_link:     "https://github.com/bwilhelm0/18224-tapeout-template/tree/main/docs"      # URL to longer form documentation, eg the README.md in your repository
-  clock_hz:     1000       # Clock frequency in Hz (if required)
-  picture:      "https://github.com/bwilhelm0/18224-tapeout-template/blob/main/docs/Internal_state_diagram.png"      # relative path to a picture in your repository
+  doc_link:     "https://github.com/bwilhelm0/18224-tapeout-template/README.md"      # URL to longer form documentation, eg the README.md in your repository
+  clock_hz:     1/(500 ?s)       # Clock frequency in Hz (if required)
+  picture:      "https://github.com/bwilhelm0/18224-tapeout-template/blob/main/docs/8008_model.png"      # relative path to a picture in your repository
   inputs:               # a description of what the inputs do
     - Data_in: 8 bits (Pins 7:0) of data with 0 being the smallest bit
     - INTR: Interrupt (Pin 8) used to exit STOPPED state
