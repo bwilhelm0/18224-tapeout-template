@@ -3,7 +3,7 @@ Brendan Wilhelm
 18-224/624 Spring 2023 Final Tapeout Project
 
 ## Overview
-![](docs/Block_diagram_simple.png)
+![](docs/Block_diagram2.png)
 This project implements the Intel 8008 instruction set and microarchitecture
 as specified in the User Manual. It uses an accumulator register for any
 operations carried out, and possesses a register file, program stack,
@@ -32,21 +32,37 @@ the current instruction. A simplified diagram can be found at docs/State_diagram
 
 ## Inputs/Outputs
 ![](docs/Pin_config.png)
+
 (This is the original 8008 pin config, but similar to what the 8008-like uses)
-  inputs:              
+
+  inputs:   
+
     - Data_in:
+
         8 bits (Pins 7:0) of data with 0 being the smallest bit
+
     - INTR: 
+
         Interrupt (Pin 8) used to exit STOPPED state
+
     - READY: 
+
         Data ready (Pin 9) used to exit the WAIT state and input the byte to the internal bus
+
     - Pins 10 and 11 unused
+
   outputs:
+
     - Data_out: 
+
         8 bits (Pins 7:0) of data with 0 being the smallest bit
+
     - State: 
+
         Outputs encoding of the processor FSM state (Pins 10:8) (T1 = 3'b010, T1I = 3'b110, T2 = 3'b100, WAIT = 3'b000, T3 = 3'b001, STOPPED = 3'b011, T4 = 3'b111, T5 = 3'b101)
+   
     - Sync: 
+
         Indicates if there is data on the Data_out pins (Pin 11)
 
 ## Hardware Peripherals
