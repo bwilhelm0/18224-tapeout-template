@@ -34,7 +34,6 @@ the current instruction. A simplified diagram can be found at docs/State_diagram
 ![](docs/Pin_config.png)
 
 (This is the original 8008 pin config, but similar to what the 8008-like uses)
-
   inputs:   
 
     - Data_in:
@@ -82,15 +81,25 @@ written to or read from depending on the upper two bits in T2. I
 recommend looking at the example programs or User Manual for what 
 instructions to input on a sample case.
 
+![](docs/Successful_tb.png)
+A successful test bench output will look something like this.
+
 The clock speed is arbitrary, as long as there is time for instructions to
 propogate in every state. To test the project, you can look at the example
 tests in the tests/i8008_tb.py file. Or, you can run the existing tests by
-running make in the tests directory. Every cycle is simulated by the python
+running "make" in the tests directory. Every cycle is simulated by the python
 simulator as the design executes, so you can update the python simulation, 
 and then call the check_state function to ensure it is in line with the 
 python simulation. I'm still working on a test bench for the final chip,
 but it will involve running a script very similar to the i8008_tb.py file
 since this handles memory management, and processor state casing already.
+
+If you want to make changes to the system verilog, then you can update
+the verilog implementation by running the build.sh script.
+
+To aid with debugging, you can enable state printing for both the python 
+and verilog implementations by setting verbose = True in the failing
+testcase.
 
 
 ## Unimplemented 8008 Features
