@@ -1,4 +1,79 @@
 `default_nettype none
+module top (
+	clk100,
+	reset_n,
+	uart_rx,
+	uart_tx,
+	base_led,
+	led,
+	sw,
+	display_sel,
+	display
+);
+	input wire clk100;
+	input wire reset_n;
+	input wire uart_rx;
+	output wire uart_tx;
+	output wire [7:0] base_led;
+	output wire [23:0] led;
+	input wire [23:0] sw;
+	output wire [3:0] display_sel;
+	output wire [7:0] display;
+	wire clk;
+	wire rst;
+	wire [11:0] chip_inputs;
+	wire [11:0] chip_outputs;
+	wire [7:0] D_in;
+	wire [7:0] D_out;
+	wire INTR;
+	wire READY;
+	wire Sync;
+	wire [2:0] state;
+	reg [1:0] display_cnt;
+	wire [3:0] disp_arr [0:3];
+	debug_harness dbg(
+		.uart_rx(uart_rx),
+		.uart_tx(uart_tx),
+		.chip_inputs(chip_inputs),
+		.chip_outputs(chip_outputs),
+		.chip_clock(clk),
+		.chip_reset(rst),
+		.clk100(clk100)
+	);
+	always @(posedge clk100)
+		if (rst)
+			display_cnt <= 2'd0;
+		else
+			display_cnt <= display_cnt + 1;
+	assign display_sel = ~(1 << display_cnt);
+	hex_to_sevenseg convert(
+		.hexdigit(disp_arr[display_cnt]),
+		.seg(display)
+	);
+	assign disp_arr[0] = chip_inputs[3:0];
+	assign disp_arr[1] = chip_inputs[7:4];
+	assign disp_arr[2] = chip_outputs[3:0];
+	assign disp_arr[3] = chip_outputs[7:4];
+	assign chip_outputs[7:0] = D_out;
+	assign chip_outputs[10:8] = state;
+	assign D_in = chip_inputs[7:0];
+	assign INTR = chip_inputs[8];
+	assign READY = chip_inputs[9];
+	i8008_core #(
+		.WIDTH(8),
+		.STACK_HEIGHT(8)
+	) DUT(
+		.D_in(D_in),
+		.INTR(INTR),
+		.READY(READY),
+		.clk(clk),
+		.rst(rst),
+		.D_out(D_out),
+		.Sync(Sync),
+		.state(state)
+	);
+	assign led = {rst, clk, chip_inputs[9:8], chip_outputs[10:0], chip_inputs[7:0]};
+endmodule
 module i8008_core (
 	D_in,
 	INTR,

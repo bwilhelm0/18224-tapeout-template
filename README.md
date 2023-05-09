@@ -34,6 +34,7 @@ the current instruction. A simplified diagram can be found at docs/State_diagram
 ![](docs/Pin_config.png)
 
 (This is the original 8008 pin config, but similar to what the 8008-like uses)
+
   inputs:   
 
     - Data_in:

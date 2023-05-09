@@ -9,9 +9,17 @@ from cocotb.runner import get_runner
 from cocotb.triggers import Timer
 from cocotb.triggers import RisingEdge
 
+from interface import Chip
+import serial.tools.list_ports
+import time
 
-# if cocotb.simulator.is_running():
-#     from adder_model import adder_model
+SERIAL_PORT = "/dev/tty.usbserial-FT4MG9OV1"
+
+# print("Listing all available serial ports:")
+# ports = serial.tools.list_ports.comports()
+# for port, desc, hwid in sorted(ports):
+#     print("{}: {} [{}]".format(port, desc, hwid))
+
 
 PCI = 0b00
 PCR = 0b01
@@ -752,6 +760,8 @@ async def i8008_basic_test(dut):
 #    output logic Sync,
 #    output state_t state)
 
+    chip = Chip(SERIAL_PORT)
+
     clk = Clock(dut.clk, 10, units="us")
     cocotb.start_soon(clk.start())
 
@@ -1211,6 +1221,7 @@ async def fibonacci_test(dut):
     random.seed(seed)
     print("fibonacci seed: ", seed)
 
+    # verbose = True
     model = i8008_model()
 
     choice = random.randint(0, 12)

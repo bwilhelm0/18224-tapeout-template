@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # move to the test directory
-cd $(pwd)/test
+cd $(pwd)/tests
 
 # run the tests
 make
