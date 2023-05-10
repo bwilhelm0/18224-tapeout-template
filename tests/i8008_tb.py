@@ -14,6 +14,7 @@ import serial.tools.list_ports
 import time
 
 SERIAL_PORT = "/dev/tty.usbserial-FT4MG9OV1"
+CLK_TIME = .001
 
 # print("Listing all available serial ports:")
 # ports = serial.tools.list_ports.comports()
@@ -749,6 +750,59 @@ def print_reg_state(dut):
 
     return reg_state
 
+def get_chip_rf(chip):
+    prog = [
+        LMr | 0,
+        LMr | 1,
+        LMr | 2,
+        LMr | 3,
+        LMr | 4,
+        LMr | 5,
+        LMr | 6,
+    ]
+    res = [0, 0, 0, 0, 0, 0, 0]
+
+    while (chip.get_all_outputs() & 0b111_00000000) >> 8 != T1I:
+        chip.set_all_inputs(0b11_00000000)
+        chip.step_clock()
+        time.sleep(CLK_TIME)
+
+    chip.set_all_inputs(0b00_00000000)
+    ind = 0
+    while ind <= 2 * len(prog):
+        chip_state = (chip.get_all_outputs() & 0b111_00000000) >> 8
+        if chip_state == T1 or chip_state == T1I:
+            ind += 1
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == T2:
+            chip.set_all_inputs(prog[int((ind-1)/2)] | (0b10_00000000))
+
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == WAIT:
+            chip.set_all_inputs(prog[int((ind-1)/2)] | (0b00_00000000))
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == T3:
+            if ind % 2 == 0:
+                res[int((ind-1)/2)] = chip.get_all_outputs() & (0b11111111)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == STOPPED:
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == T4:
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        elif chip_state == T5:
+            chip.step_clock()
+            time.sleep(CLK_TIME)
+        else:
+            assert 1==0, "Invalid state!"
+
+
+    return res
 
 
 @cocotb.test()
@@ -766,71 +820,150 @@ async def i8008_basic_test(dut):
     cocotb.start_soon(clk.start())
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     dut.D_in.value = 0
     dut.INTR.value = 0
     dut.READY.value = 0
     dut.rst.value = 1
+
+    chip.set_all_inputs(0b00_00_00000000)
+    chip.set_reset(1)
+
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
 
     assert dut.state.value == T1, "Basic test failed with: {state} != {actual}".format(state=T1, actual=dut.state.value)
     assert dut.D_out.value == 0b00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=0b00000000, actual=dut.D_out.value)
+    assert chip.get_all_outputs() == 0b1_010_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_010_00000000), actual=bin(chip.get_all_outputs()))
+
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
     assert dut.state.value == T1, "Basic test failed with: {state} != {actual}".format(state=T1, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b1_010_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_010_00000000), actual=bin(chip.get_all_outputs()))
+    
     dut.D_in.value = 0b00_001_000
     dut.INTR.value = 0
     dut.READY.value = 0
     dut.rst.value = 0
 
+    chip.set_all_inputs(0b00_00_00001000)
+    chip.set_reset(0)
+
     await RisingEdge(dut.clk)
     assert dut.state.value == T1, "Basic test failed with: {state} != {actual}".format(state=T1, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b1_010_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_010_00000000), actual=bin(chip.get_all_outputs()))
+
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
     assert dut.state.value == T2, "Basic test failed with: {state} != {actual}".format(state=T2, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b1_100_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b1_100_00000000), actual=bin(chip.get_all_outputs()))
+
     dut.READY.value = 1
+    chip.set_all_inputs(0b00_10_00001000)
+
+    await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+    assert dut.state.value == WAIT, "Basic test failed with: {state} != {actual}".format(state=WAIT, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
+
+    await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+    assert dut.state.value == WAIT, "Basic test failed with: {state} != {actual}".format(state=WAIT, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
 
     await RisingEdge(dut.clk)
     assert dut.state.value == WAIT, "Basic test failed with: {state} != {actual}".format(state=WAIT, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
+    
+    await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
 
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
     dut.READY.value = 0
+    chip.set_all_inputs(0b00_00_00001000)
     assert dut.state.value == T3, "Basic test failed with: {state} != {actual}".format(state=T3, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_001_00001000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_001_00000000), actual=bin(chip.get_all_outputs()))
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
     assert dut.state.value == T4, "Basic test failed with: {state} != {actual}".format(state=T4, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_111_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_010_00000000), actual=bin(chip.get_all_outputs()))
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
     assert dut.state.value == T5, "Basic test failed with: {state} != {actual}".format(state=T5, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_101_00000001, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_101_00000000), actual=bin(chip.get_all_outputs()))
     assert dut.rf.ACC.value == 0, "Basic test failed with: 1 != {actual}".format(actual=dut.rf.ACC.value)
     assert dut.bus.value == 1, "Basic test failed with: 1 != {actual}".format(actual=dut.bus.value)
     
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     assert dut.rf.ACC.value == 0, "Basic test failed with: 1 != {actual}".format(actual=dut.rf.ACC.value)
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     assert dut.state.value == T2, "Basic test failed with: {state} != {actual}".format(state=T2, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b1_100_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_010_00000000), actual=bin(chip.get_all_outputs()))
     dut.READY.value = 1
     dut.D_in.value = 0b11_111_001
+    chip.set_all_inputs(0b00_10_11111001)
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     assert dut.state.value == WAIT, "Basic test failed with: {state} != {actual}".format(state=WAIT, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
 
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
+
     await RisingEdge(dut.clk)
+    # chip.step_clock()
+    # time.sleep(CLK_TIME)
+    assert chip.get_all_outputs() == 0b0_000_00000000, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_000_00000000), actual=bin(chip.get_all_outputs()))
+
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     dut.READY.value = 0
+    chip.set_all_inputs(0b00_00_11111001)
     assert dut.state.value == T3, "Basic test failed with: {state} != {actual}".format(state=T3, actual=dut.state.value)
+    assert chip.get_all_outputs() == 0b0_001_11111001, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_001_00000000), actual=bin(chip.get_all_outputs()))
 
 
     cycle_count = 0
     while dut.D_out.value != 0b00000001 and (cycle_count < 20):
         cycle_count += 1
         await RisingEdge(dut.clk)
+        chip.step_clock()
+        time.sleep(CLK_TIME)
 
     assert dut.D_out.value == 0b00000001, "Basic test failed with: {D_out} != {actual}".format(D_out=0b00000001, actual=dut.D_out.value)
+    assert chip.get_all_outputs() == 0b0_111_00000001, "Basic test failed with: {D_out} != {actual}".format(D_out=bin(0b0_111_00000001), actual=bin(chip.get_all_outputs()))
+    
 
 
 @cocotb.test()
@@ -844,63 +977,109 @@ async def ALU_add_test(dut):
             0b10_000_111, # A <- A + Mem
             0b00_000_111] # "Mem"
 
+    chip = Chip(SERIAL_PORT)
+
     clk = Clock(dut.clk, 10, units="us")
     cocotb.start_soon(clk.start())
 
     # Setup the processor for testing
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     dut.D_in.value = 0
     dut.INTR.value = 0
     dut.READY.value = 0
     dut.rst.value = 1
+
+    chip.set_all_inputs(0b00_00_00000000)
+    chip.set_reset(1)
+
     await RisingEdge(dut.clk)
+    chip.step_clock()
+    time.sleep(CLK_TIME)
+
     dut.rst.value = 0
+    chip.set_reset(0)
+
     await RisingEdge(dut.clk)
+    # chip.step_clock()
+    # time.sleep(CLK_TIME)
 
     assert dut.state.value == T1, "ALU test failed with: {state} != {actual}".format(state=T1, actual=dut.state.value)
     assert dut.D_out.value == 0b00000000, "ALU test failed with: {D_out} != {actual}".format(D_out=0b00000000, actual=dut.D_out.value)
+    assert chip.get_all_outputs() == 0b1_010_00000000, "ALU test failed with: {D_out} != {actual}".format(D_out=bin(0b1_010_00000000), actual=bin(chip.get_all_outputs()))
 
-    # await RisingEdge(dut.clk)
-    # await RisingEdge(dut.clk)
-    # assert dut.state.value == T1, "Basic test failed with: {state} != {actual}".format(state=T1, actual=dut.state.value)
 
     ind = 0
+    chip_state = (chip.get_all_outputs() & 0b111_00000000) >> 8
+    assert chip_state == dut.state.value
+
     while ind <= len(prog):
+        chip_state = (chip.get_all_outputs() & 0b111_00000000) >> 8
+        # print("chip_state = {chip}, dut = {dut}".format(chip=bin(chip_state), dut=dut.state.value))
+        assert chip_state == dut.state.value or (chip_state == T3 and dut.state.value == WAIT), "Ind is {ind}, pc is {PC}".format(ind=ind, PC=dut.PC_out.value)
+
         if dut.state.value == T1:
             ind += 1
             if verbose:
                 print_reg_state(dut)
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         elif dut.state.value == T2:
             if verbose: print("PC_H = {PC_H}, TYPE = {AddrType}".format(PC_H=dut.D_out.value, AddrType=(dut.D_out.value>>6)))
             dut.READY.value = 1
             dut.D_in.value = prog[ind-1]
+            chip.set_all_inputs(prog[ind-1] | (0b10_00000000))
+
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         elif dut.state.value == WAIT:
+            dut.READY.value = 0
+            chip.set_all_inputs(prog[ind-1] | (0b00_00000000))
             await RisingEdge(dut.clk)
+            if chip_state == WAIT:
+                chip.step_clock()
+                time.sleep(CLK_TIME)
         elif dut.state.value == T3:
             if verbose: print("Instr: %b", dut.instr.value)
-            dut.READY.value = 0
+
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         elif dut.state.value == STOPPED:
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         elif dut.state.value == T4:
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         elif dut.state.value == T5:
             await RisingEdge(dut.clk)
+            chip.step_clock()
+            time.sleep(CLK_TIME)
         else:
             assert 1==0, "Invalid state!"
+
 
     if verbose:
         print_reg_state(dut)
 
+    res = get_chip_rf(chip)
+
     for sel in range(7):
         if sel == 0:
             assert dut.rf._id(f"rf[{sel}]", extended=False).value == 0b00000111
+            assert res[sel] == 0b00000111
         elif sel == 1:
             assert dut.rf._id(f"rf[{sel}]", extended=False).value == 0b00011100
+            assert res[sel] == 0b00011100
         else:
             assert dut.rf._id(f"rf[{sel}]", extended=False).value == 0
+            assert res[sel] == 0b00000000
     
 
 

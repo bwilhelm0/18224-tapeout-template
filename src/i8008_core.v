@@ -40,7 +40,7 @@ module top (
 		.chip_reset(rst),
 		.clk100(clk100)
 	);
-	always @(posedge clk100)
+	always @(posedge clk0)
 		if (rst)
 			display_cnt <= 2'd0;
 		else
@@ -56,6 +56,7 @@ module top (
 	assign disp_arr[3] = chip_outputs[7:4];
 	assign chip_outputs[7:0] = D_out;
 	assign chip_outputs[10:8] = state;
+	assign chip_outputs[11] = Sync;
 	assign D_in = chip_inputs[7:0];
 	assign INTR = chip_inputs[8];
 	assign READY = chip_inputs[9];

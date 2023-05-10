@@ -54,7 +54,7 @@ module top (
   //     .PLLOUTCORE(clk)
   // );
 
-  always_ff @(posedge clk100) begin
+  always_ff @(posedge clk0) begin
     if (rst)
       display_cnt <= 2'd0;
     else
@@ -78,7 +78,7 @@ module top (
 
   assign chip_outputs[7:0] = D_out;
   assign chip_outputs[10:8] = state;
-  //assign chip_outputs[11] = 0; //Sync;
+  assign chip_outputs[11] = Sync; 
   assign D_in = chip_inputs[7:0];
   assign INTR = chip_inputs[8];
   assign READY = chip_inputs[9];
